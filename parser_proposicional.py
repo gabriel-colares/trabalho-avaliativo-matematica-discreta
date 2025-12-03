@@ -1,16 +1,20 @@
 import re
 
-def get_variables(exprss: str):
-    return sorted(set(re.findall(r"[A-Za-z]", exprss)))
+def get_variables(expr: str):
+    vars_found = re.findall(r"[A-Za-z]", expr)
+    unique_vars = []
+    for v in vars_found:
+        if v not in unique_vars:
+            unique_vars.append(v)
+    return sorted(unique_vars)
 
-def parse_expr(exprss: str):
-    exprss = exprss.replace(" ", "")
-    exprss = exprss.replace("~", " not ")
-    exprss = exprss.replace("&", " and ")
-    exprss = exprss.replace("∧", " and ")
-    exprss = exprss.replace("|", " or ")
-    exprss = exprss.replace("∨", " or ")
-    exprss = exprss.replace("->", " <= ")
-    exprss = exprss.replace("<->", " == ")
-    
-    return exprss
+def parse_expr(expr: str):
+    expr = expr.replace(" ", "")
+    expr = expr.replace("~", " not ")
+    expr = expr.replace("&", " and ")
+    expr = expr.replace("∧", " and ")
+    expr = expr.replace("|", " or ")
+    expr = expr.replace("∨", " or ")
+    expr = expr.replace("<->", " == ")
+    expr = expr.replace("->", " <= ")
+    return expr

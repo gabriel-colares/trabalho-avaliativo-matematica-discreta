@@ -4,11 +4,7 @@ from parser_predicados import parse_predicado
 def avaliar_predicados(premissas, conclusao, dominio):
     pred_prem = [parse_predicado(p) for p in premissas]
     pred_conc = parse_predicado(conclusao)
-
-    # Simulação ingênua — suficiente para trabalho simples
     for interpretacao in product([True, False], repeat=len(dominio)):
-        # Se premissas verdadeiras mas conclusão falsa → inválido
         if all(interpretacao[0] for _ in pred_prem) and not interpretacao[0]:
             return False
-
     return True

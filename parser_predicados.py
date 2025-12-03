@@ -1,6 +1,3 @@
-# parser_predicados.py
-# Pessoa 4
-
 import re
 
 def parse_predicado(expr):
