@@ -7,22 +7,35 @@ from regras_inferencia import particularizacao_universal
 
 def menu_proposicional():
     n = int(input("Número de premissas: "))
-    premissas = [input(f"Premissa {i+1}: ") for i in range(n)]
+    premissas = []
+    for i in range(n):
+        p = input(f"Premissa {i+1}: ")
+        premissas.append(p)
     conclusao = input("Conclusão: ")
     ok = tabela_verdade(premissas, conclusao)
     forma = identificar_forma(premissas, conclusao)
     print("\nResultado:")
     print("Forma do argumento:", forma)
-    print("Válido?" , "SIM" if ok else "NÃO")
+    if ok:
+        print("Válido? SIM")
+    else:
+        print("Válido? NÃO")
 
 def menu_predicados():
-    dominio = input("Domínio (ex: a,b,c): ").split(",")
+    dominio_str = input("Domínio (ex: a,b,c): ")
+    dominio = dominio_str.split(",")
     n = int(input("Número de premissas: "))
-    premissas = [input(f"Premissa {i+1}: ") for i in range(n)]
+    premissas = []
+    for i in range(n):
+        p = input(f"Premissa {i+1}: ")
+        premissas.append(p)
     conclusao = input("Conclusão: ")
     ok = avaliar_predicados(premissas, conclusao, dominio)
     print("\nResultado:")
-    print("Válido?" , "SIM" if ok else "NÃO")
+    if ok:
+        print("Válido? SIM")
+    else:
+        print("Válido? NÃO")
 
 def main():
     while True:
