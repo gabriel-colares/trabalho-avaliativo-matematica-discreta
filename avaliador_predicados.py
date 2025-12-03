@@ -1,65 +1,112 @@
-from parser_predicados import parse_predicado
+from itertools import product
+from parser_predicados import extrair_predicados_info
+import re
 
-def gerar_combinacoes(n):
-    # Mesma função de combinações usada em tabela_verdade
-    total = 2 ** n
-    resultado = []
-    for i in range(total):
-        linha = []
-        temp = i
-        for j in range(n):
-            bit = temp % 2
-            if bit == 1:
-                linha.insert(0, True)
-            else:
-                linha.insert(0, False)
-            temp = temp // 2
-        resultado.append(linha)
-    return resultado
+def transpile_predicado(expr):
+    expr = expr.replace(" ", "")
+    
+    expr = expr.replace("∧", " and ").replace("&", " and ")
+    expr = expr.replace("∨", " or ").replace("|", " or ")
+    expr = expr.replace("->", " <= ")
+    expr = expr.replace("<->", " == ")
+    expr = expr.replace("~", " not ")
+    
+    expr = expr.replace("[", "(").replace("]", ")")
+    
+    pattern_forall = r"\(∀([a-z])\)"
+    while re.search(pattern_forall, expr):
+        expr = re.sub(pattern_forall, r"forall(lambda \1: ", expr, count=1)
+        expr += ")" 
+        
+    pattern_exists = r"\(∃([a-z])\)"
+    while re.search(pattern_exists, expr):
+        expr = re.sub(pattern_exists, r"exists(lambda \1: ", expr, count=1)
+        expr += ")"
+        
+    pattern_pred = r"([A-Z][a-zA-Z0-9]*)\(([^)]+)\)"
+    expr = re.sub(pattern_pred, r"PRED['\1'](\2)", expr)
+    
+    return expr
 
 def avaliar_predicados(premissas, conclusao, dominio):
-    pred_prem = []
-    for p in premissas:
-        parsed = parse_predicado(p)
-        pred_prem.append(parsed)
+    todas_exprs = premissas + [conclusao]
+    info_predicados = extrair_predicados_info(todas_exprs)
     
-    pred_conc = parse_predicado(conclusao)
+    sorted_preds = sorted(info_predicados.keys())
     
-    combinacoes = gerar_combinacoes(len(dominio))
+    total_bits = 0
+    pred_offsets = {}
+    for p in sorted_preds:
+        aridade = info_predicados[p]
+        pred_offsets[p] = total_bits
+        total_bits += (len(dominio) ** aridade)
+        
+    interpretacoes = product([False, True], repeat=total_bits)
     
-    for interpretacao in combinacoes:
-        # Verifica se premissas são todas verdadeiras para essa interpretação
-        todas_premissas_ok = True
+    dominio_list = dominio
+    
+    def forall(f):
+        return all(f(x) for x in dominio_list)
         
-        # Aqui a lógica original era: if all(interpretacao[0] for _ in pred_prem)
-        # O original usava interpretacao[0] ignorando qual predicado era?
-        # O código original era:
-        # for interpretacao in product([True, False], repeat=len(dominio)):
-        #    if all(interpretacao[0] for _ in pred_prem) and not interpretacao[0]:
-        #        return False
-        # Isso parece errado no código original (interpretacao[0] é só o valor do primeiro elemento do dominio?)
-        # Mas vou manter a lógica "ingênua" do original traduzida literalmente, 
-        # pois o objetivo é refatorar a estrutura, não corrigir a lógica de domínio se ela já era assim.
-        # ESPERA: O código original dizia:
-        # pred_prem = [parse_predicado(p) for p in premissas]
-        # if all(interpretacao[0] for _ in pred_prem) and not interpretacao[0]:
-        # Isso significa que ele testava se o PRIMEIRO valor da combinação era True para todas as premissas?
-        # Isso parece um placeholder "Simulação ingênua" como dizia o comentário.
-        # Vou manter a fidelidade ao comportamento original, apenas removendo all().
+    def exists(f):
+        return any(f(x) for x in dominio_list)
+    
+    py_premissas = [transpile_predicado(p) for p in premissas]
+    py_conclusao = transpile_predicado(conclusao)
+    
+    for bits in interpretacoes:
+        PRED = {}
         
-        # A lógica original testava interpretacao[0] repetidamente.
-        # interpretacao é uma lista de booleans (uma linha da tabela verdade simulada sobre o domínio).
-        
-        val_primeiro = interpretacao[0]
-        
-        for _ in pred_prem:
-            if not val_primeiro:
-                todas_premissas_ok = False
-                break
-        
-        if todas_premissas_ok:
-            if not val_primeiro: # concl_val é interpretacao[0] também no original?
-                # O original: ... and not interpretacao[0]
-                return False
+        for p in sorted_preds:
+            aridade = info_predicados[p]
+            offset = pred_offsets[p]
+            size = len(dominio) ** aridade
+            chunk = bits[offset : offset+size]
+            
+            mapa = {}
+            idx = 0
+            
+            args_comb = product(dominio_list, repeat=aridade)
+            for args in args_comb:
+                if aridade == 1:
+                    key = args[0]
+                else:
+                    key = args
+                mapa[key] = chunk[idx]
+                idx += 1
+            
+            def make_func(m, arity):
+                def func(*args):
+                    if arity == 1:
+                        k = args[0]
+                    else:
+                        k = args
+                    return m.get(k, False)
+                return func
                 
-    return True
+            PRED[p] = make_func(mapa, aridade)
+            
+        context = {
+            "forall": forall,
+            "exists": exists,
+            "PRED": PRED,
+            "dominio": dominio_list
+        }
+        
+        for d in dominio_list:
+            context[d] = d
+            
+        try:
+            premissas_ok = True
+            for pp in py_premissas:
+                if not eval(pp, context):
+                    premissas_ok = False
+                    break
+            
+            if premissas_ok:
+                if not eval(py_conclusao, context):
+                    return False, bits
+        except Exception:
+            return False, None
+
+    return True, None

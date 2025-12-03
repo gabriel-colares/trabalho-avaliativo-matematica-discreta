@@ -8,16 +8,12 @@ def avaliar(expr, valores):
     return eval(expr_py)
 
 def gerar_combinacoes(n):
-    # Gera todas as combinações de True/False para n variáveis
-    # Retorna uma lista de listas, ex: [[False, False], [False, True], ...]
-    # Equivalente a itertools.product([False, True], repeat=n)
     total = 2 ** n
     resultado = []
     for i in range(total):
         linha = []
         temp = i
         for j in range(n):
-            # Pega o último bit
             bit = temp % 2
             if bit == 1:
                 linha.insert(0, True)
@@ -52,9 +48,17 @@ def tabela_verdade(premissas, conclusao):
         if header != "":
             header = header + " | "
         header = header + v
-    print("\nTabela-verdade:\n" + header + " | Resultado")
+    
+    header_extra = ""
+    for p in premissas:
+        header_extra = header_extra + " | " + p
+    header_extra = header_extra + " | " + conclusao
+    
+    print("\nTabela-verdade:")
+    print(header + header_extra + " | Válido?")
 
     valido_em_todos = True
+    contra_exemplos = []
     
     combinacoes = gerar_combinacoes(len(vars))
 
@@ -63,33 +67,46 @@ def tabela_verdade(premissas, conclusao):
         for i in range(len(vars)):
             vals[vars[i]] = bits[i]
 
-        # Avaliar premissas manualmente sem all()
         premissas_val = True
+        vals_premissas = []
         for p in premissas:
             valor_p = avaliar(p, vals)
+            vals_premissas.append(valor_p)
             if not valor_p:
                 premissas_val = False
-                break
         
         concl_val = avaliar(conclusao, vals)
 
-        # Montar string de valores para exibição
         vals_str = ""
         for i in range(len(vars)):
             v = vars[i]
             val = vals[v]
             s = "F"
             if val:
-                s = "T"
+                s = "V"
             if vals_str != "":
                 vals_str = vals_str + " | "
             vals_str = vals_str + s
-        
-        seta = "->"
-        print(vals_str + " | " + str(premissas_val) + " " + seta + " " + str(concl_val))
+            
+        for vp in vals_premissas:
+            s = "F"
+            if vp: s = "V"
+            vals_str = vals_str + " | " + s
+            
+        s_concl = "F"
+        if concl_val: s_concl = "V"
+        vals_str = vals_str + " | " + s_concl
 
-        if premissas_val:
-            if not concl_val:
-                valido_em_todos = False
+        marcador = ""
+        if premissas_val and not concl_val:
+            valido_em_todos = False
+            contra_exemplos.append(vals)
+            marcador = " * INVALIDO *"
+        elif premissas_val and concl_val:
+            marcador = " OK"
+        else:
+            marcador = " -" 
 
-    return valido_em_todos
+        print(vals_str + " |" + marcador)
+
+    return valido_em_todos, contra_exemplos
