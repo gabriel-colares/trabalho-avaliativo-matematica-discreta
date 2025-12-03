@@ -25,6 +25,7 @@ def parse_expr(expr: str):
     expr = expr.replace("∧", " and ")
     expr = expr.replace("|", " or ")
     expr = expr.replace("∨", " or ")
+    expr = expr.replace(" v ", " or ")
     expr = expr.replace("not", " not ")
     expr = expr.replace("and", " and ")
     expr = expr.replace("or", " or ")
